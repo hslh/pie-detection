@@ -39,10 +39,9 @@ def get_category_members(category):
 		category_members = res_json['query']['categorymembers']
 		for category_member in category_members:
 			title = category_member['title']
-			if re.search('(^Appendix:)|(^Category:)|(^Special:)|(^Wiktionary:)|(^Category_talk:)|(^Citations:)', title): # Filter out special pages 
-				print "Filtered out '{0}' from idiom list".format(title)
-			elif ' ' in title: # Exclude single-word 'idioms'
-				titles.append(title.strip())
+			if not re.search('(^Appendix:)|(^Category:)|(^Special:)|(^Wiktionary:)|(^Category_talk:)|(^Citations:)', title): # Filter out special pages 
+				if ' ' in title: # Exclude single-word 'idioms'
+					titles.append(title.strip())
 		# Check for more members in category
 		try:
 			cmcontinue = res_json['continue']['cmcontinue']
