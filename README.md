@@ -1,5 +1,5 @@
 # Automatic Detection of Potentially Idiomatic Expressions
-This is the source code for a system to automatically detect potentially idiomatic expressiosn (PIEs, for short) in text. It has four different methods of doing so: exact string match, fuzzy string match, inflectional string match, and parse-based matching. It relies on a set of digitally available idiom dictionaries to get an inventory of expressions, and extracts all instances of those expressions (with context) from the input corpus.
+This is the source code for a system to automatically detect potentially idiomatic expressions (PIEs, for short) in text. It has four different methods of doing so: exact string match, fuzzy string match, inflectional string match, and parse-based matching. It relies on a set of digitally available idiom dictionaries to get an inventory of expressions, and extracts all instances of those expressions (with context) from the input corpus.
 
 ## Requirements 
 To run this code, you'll need the following Python setup:
