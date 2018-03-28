@@ -7,7 +7,7 @@ import pos2morpha
 
 import subprocess, shlex, time, json, re, itertools, csv
 import spacy
-import en_core_web_sm # Spacy model
+import en_core_web_sm as spacy_model 
 from stanfordcorenlp import StanfordCoreNLP
 import nltk.data
 
@@ -134,7 +134,7 @@ def load_parser(parser_type):
 	time_0 = time.time()
 	print 'Loading parser...'
 	if parser_type == 'spacy':
-		parser = en_core_web_sm.load()
+		parser = spacy_model.load()
 	elif parser_type == 'stanford':
 		parser = StanfordCoreNLP('ext/stanford', memory='6g')
 		parse((parser_type, parser), 'The cat sat on the mat.') # Annotate dummy sentence to force loading of annotation modules
@@ -175,46 +175,32 @@ def load_pos_tagger():
 	
 	time_0 = time.time()
 	print 'Loading PoS-tagger...'
-	pos_tagger_and_tokenizer = en_core_web_sm.load(parser = False, entity = False, matcher = False)
-	pos_tagger = en_core_web_sm.load(tokenizer = pos_tagger_and_tokenizer.tokenizer.tokens_from_list, parser = False, entity = False, matcher = False)
+	pos_tagger = spacy_model.load(disable = ['ner', 'parser'])
 	print 'Done! Loading PoS-tagger took {0:.2f} seconds'.format(time.time() - time_0)
 
-	return pos_tagger, pos_tagger_and_tokenizer
+	return pos_tagger
 
-def pos_tag(pos_tagger, pos_tagger_and_tokenizer, text):
-	'''Takes pos_tagger and tokenized utf-8 text, returns list of word|POS strings.'''
-
-	# Normalize quotes, ‘ ’ ❛ ❜ to ', and “ ” ❝ ❞ to ", parser doesn't process them well
-	text = re.sub('‘|’|❛|❜', "'", text)
-	text = re.sub('“|”|❝|❞', '"', text)
-
+def pos_tag(pos_tagger, text):
+	'''Takes pos_tagger and tokenized utf-8 idiom/sentence, returns list of word|POS strings.'''
+	
+	# Normalize quotes, ‘ ’ ❛ ❜ to ', and “ ” ❝ ❞ to ", Spacy doesn't process them well
+	text = re.sub(u'‘|’|❛|❜', u"'", text)
+	text = re.sub(u'“|”|❝|❞', u'"', text)
+	# Make Doc
+	doc = spacy.tokens.Doc(pos_tagger.vocab, text.split())
+	# Set sentence boundary
+	for token in doc:
+		if token.i == 0:
+			token.is_sent_start = True
+		else:
+			token.is_sent_start = False
+	# Do actual tagging
+	doc = pos_tagger.tagger(doc)
+	# Convert into list of words and tags
 	words_and_tags = []
-	try:
-		tagged_text = pos_tagger([token for token in text.split(' ')])
-		for tagged_token in tagged_text:
-			words_and_tags.append(unicode('{0}|{1}'.format(tagged_token.text.encode('utf-8'), tagged_token.tag_.encode('utf-8')), 'utf-8'))
-	except IndexError: 
-		# Spacy doesn't deal with pre-tokenized text when the token contains quotes, commas, and unknown words
-		# Back-off to re-doing PoS-tagging with tokenization, match tags to string indices, assign newly split tokens 'NNP' by default
-		tokenized_and_tagged_text = pos_tagger_and_tokenizer(text)
-		start = 0
-		end = 0
-		for old_token in text.split(' '):
-			end += len(old_token) + 1 # Match span of word, including trailing space
-			match = False
-			for token in tokenized_and_tagged_text:
-				if token.i != len(tokenized_and_tagged_text) - 1:
-					next_token = tokenized_and_tagged_text[token.i + 1]
-					if token.idx == start and next_token.idx == end:
-						words_and_tags.append(unicode('{0}|{1}'.format(token.text.encode('utf-8'), token.tag_.encode('utf-8')), 'utf-8'))
-						match = True
-				elif token.idx == start:
-						words_and_tags.append(unicode('{0}|{1}'.format(token.text.encode('utf-8'), token.tag_.encode('utf-8')), 'utf-8'))
-						match = True
-			if not match:
-				words_and_tags.append(unicode('{0}|NNP'.format(old_token.encode('utf-8')), 'utf-8')) # Assign NNP to things split by Spacy
-			start = end	# Move to next token 
-
+	for token in doc:
+		words_and_tags.append(token.text + u'|' + token.tag_)
+		
 	return words_and_tags
 
 ###### MORPHA ######	
@@ -271,7 +257,7 @@ def load_tokenizer():
 
 	time_0 = time.time()
 	print 'Loading tokenizer...'
-	tokenizer = en_core_web_sm.load(tagger = False, parser = False, vectors = False, entity = False, matcher = False)
+	tokenizer = spacy_model.load(disable = ['tagger', 'ner', 'parser'])
 	print 'Done! Loading tokenizer took {0:.2f} seconds'.format(time.time() - time_0)
 
 	return tokenizer
@@ -423,7 +409,7 @@ def inflect_idioms(idioms, morph_dir):
 	idioms and a mapping between inflectional variants and the base form.
 	'''
 	
-	pos_tagger, pos_tagger_and_tokenizer = load_pos_tagger()
+	pos_tagger = load_pos_tagger()
 	inflected_idioms = []
 	base_form_map = {} # Maps inflectional variants to base form, format: {'inflectional variant': 'base form'}
 	print 'Inflecting idioms...'
@@ -433,7 +419,7 @@ def inflect_idioms(idioms, morph_dir):
 		# Add original form to base form map
 		base_form_map[idiom] = idiom
 		# Tag tokens, convert to Morpha tags
-		pos_tokens = pos_tag(pos_tagger, pos_tagger_and_tokenizer, idiom)
+		pos_tokens = pos_tag(pos_tagger, idiom)
 		if pos_tokens:
 			morpha_tokens = [pos2morpha.convert_token(pos_token).encode('utf-8') for pos_token in pos_tokens]
 			# Run morpha

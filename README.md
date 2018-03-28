@@ -7,7 +7,7 @@ To run this code, you'll need the following Python setup:
 * beautifulsoup4 4.5.1
 * requests 2.17.3
 * nltk 3.2.4
-* spacy 1.8.2 + en_core_web_sm 1.2.0
+* spacy 2.0.6 + en_core_web_sm 2.0.0
 * lxml 3.3.3
 
 Different versions might work just as well, but cannot be guaranteed. 
