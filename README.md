@@ -29,4 +29,4 @@ You might also need:
 - Get an overview of all options by simply running `python detect_pies.py --help`
 
 ## Contact
-For any questions about (running) the system, feel free to contact me at hesselhaagsma@gmail.com
+For any questions about (running) the system, feel free to contact me.
